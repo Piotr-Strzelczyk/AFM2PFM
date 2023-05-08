@@ -192,6 +192,7 @@ class PfmWriter:
         self.pfm_kerns = []
 
     def set_default_values(self):
+        """ Set some default values, most of them will be overwritten later. """
         self.pfm_values['Version'] = 256
         self.pfm_values['Type'] = 129
         self.pfm_values['Points'] = 10
@@ -314,7 +315,10 @@ class PfmWriter:
             for key, value in self.pfm_values.items():
                 print(f"{key:20s} {value}")
 
+        self. calculate_offsets()
+
     def prepare_widths(self, afm_widths: list):
+        """ Prepare character width table values and template. """
         pfm_widths_num = self.pfm_values['LastChar'] - self.pfm_values['FirstChar'] + 1
         self.pfm_widths_length = pfm_widths_num * 2
         self.pfm_widths_template += 'H' * pfm_widths_num
@@ -326,7 +330,8 @@ class PfmWriter:
             else:
                 self.pfm_widths.append(self.pfm_values['AvgWidth'])
 
-    def prepare_kerns(self, afm_kerns: list, no_kern_limit):
+    def prepare_kerns(self, afm_kerns: list, no_kern_limit: bool):
+        """ Prepare kern table values and template. """
         if afm_kerns:
             if len(afm_kerns) > 511:
                 if no_kern_limit:
@@ -350,6 +355,7 @@ class PfmWriter:
         self.pfm_values['KernPairs'] = self.pfm_kerns_num
 
     def put_extra_values(self, name, value):
+        """ Prepare extra string values (outside PFM standard strings). """
         self.pfm_names.append(name)
         self.pfm_values[name] = value
         self.pfm_template[name] = f"{1 + len(value)}s"
@@ -421,7 +427,7 @@ class PfmWriter:
         for i in range(self.pfm_strings_start, len(self.pfm_names)):
             self.pfm_template[self.pfm_names[i]] = f"{1 + len(self.pfm_values[self.pfm_names[i]])}s"
 
-    def make_pfm(self) -> bytes:
+    def serialize_pfm(self) -> bytes:
         """ Serialize PFM data into binary format of PFM file. """
         content_head = [self.pfm_values[self.pfm_names[i]]
                         for i in range(self.pfm_ext_start)]
@@ -479,13 +485,14 @@ class PfmWriter:
                 new_pfm += struct.pack(self.pfm_template[self.pfm_names[i]], self.pfm_values[self.pfm_names[i]])
 
         if self.calculated_size != len(new_pfm):
-            print(f"A2P: Packing PFM went wrong {self.calculated_size}<>{len(new_pfm)}!!!")
+            raise RuntimeError(f"A2P: Packing PFM went wrong {self.calculated_size}<>{len(new_pfm)}!!!")
 
         return new_pfm
 
-    def write_output(self, output_file: str):
+    def make_pfm(self, output_file: str):
+        """ Method for PFM serialization and write it to a file. """
         with open(output_file, "wb") as out_file:
-            out_file.write(self.make_pfm())
+            out_file.write(self.serialize_pfm())
 
 
 class AfmReader:
@@ -496,6 +503,7 @@ class AfmReader:
 
     @staticmethod
     def read_afm(afm_filename: str) -> typing.Tuple[dict, list, list]:
+        """ Reads AFM from file and organize font info into data structures. """
         afm_values: typing.Dict[str, str | int | float] = {}
         afm_widths: typing.List[float | None] = [None] * 256
         afm_kerns: typing.List[typing.Tuple[int, int, float]] = []
@@ -584,6 +592,7 @@ class AfmReader:
 
 
 def main():
+    """ Main method for use AFM2PFM as command line converter. """
     print(f"This is afm2pfm, ver. {VERSION}.")
     parser = argparse.ArgumentParser(description="This is afm2pfm, makes PFM file out of given AFM.")
     parser.add_argument("input", help="Input AFM file")
@@ -602,8 +611,7 @@ def main():
 
     pfm_writer = PfmWriter()
     pfm_writer.prepare_data(afm_values, afm_widths, afm_kerns, extra_args, args.nokernlimit)
-    pfm_writer.calculate_offsets()
-    pfm_writer.write_output(args.output)
+    pfm_writer.make_pfm(args.output)
 
 
 if __name__ == "__main__":
