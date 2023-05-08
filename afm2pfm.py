@@ -68,7 +68,7 @@ PFM_HEADER = [
     ('I', 'PairKernTable'),
     ('I', 'TrackKernTable'),
     ('I', 'DriverInfo'),
-    ('I', 'Reserved')
+    ('I', 'Reserved'),
 ]
 PFM_EXTMETRIC = [
     ('h', 'Size_ext'),
@@ -96,7 +96,7 @@ PFM_EXTMETRIC = [
     ('h', 'StrikeOutOffset'),
     ('h', 'StrikeOutWidth'),
     ('H', 'KernPairs'),
-    ('H', 'KernTracks')
+    ('H', 'KernTracks'),
 ]
 PFM_STRINGS = [  # strings with variable length
     ('Device', 'DeviceName'),
@@ -119,7 +119,7 @@ WEIGTHS = {  # magic numbers
     'Medium': 500,
     'Demi': 500,
     'Bold': 700,
-    'Black': 1000
+    'Black': 1000,
 }
 AFM_HEADERS_DEFAULTS = {
     'FontName': "FontAnna",
@@ -135,7 +135,7 @@ AFM_HEADERS_DEFAULTS = {
     'EncodingScheme': "FontSpecific",  # not used
     'Version': "0.000",  # not used
     'FullName': "FontAnna",  # not used
-    'FamilyName': "FontAnna"  # not used
+    'FamilyName': "FontAnna",  # not used
 }
 
 
@@ -216,10 +216,17 @@ class PfmWriter:
         self.pfm_values['MaxScale'] = 900
         self.pfm_values['MasterUnits'] = 1000
         self.pfm_values['KernTracks'] = 0
-        self.pfm_values['DeviceName'] = 'PostScript'
+        self.pfm_values['DeviceName'] = "PostScript"
 
-    def prepare_data(self, afm_values: dict, afm_widths: list, afm_kerns: list, extra_args: dict, no_kern_limit):
-        """ Method that gets external data and sets all values needed for PFM file """
+    def prepare_data(
+        self,
+        afm_values: dict,
+        afm_widths: list,
+        afm_kerns: list,
+        extra_args: dict,
+        no_kern_limit,
+    ):
+        """ Method that gets external data and sets all values needed for PFM file. """
 
         def rounds(x):
             return round(float(x))
@@ -315,7 +322,7 @@ class PfmWriter:
             for key, value in self.pfm_values.items():
                 print(f"{key:20s} {value}")
 
-        self. calculate_offsets()
+        self.calculate_offsets()
 
     def prepare_widths(self, afm_widths: list):
         """ Prepare character width table values and template. """
@@ -493,6 +500,7 @@ class PfmWriter:
         """ Method for PFM serialization and write it to a file. """
         with open(output_file, "wb") as out_file:
             out_file.write(self.serialize_pfm())
+        print(f"PFM written to: {output_file}")
 
 
 class AfmReader:
@@ -535,10 +543,10 @@ class AfmReader:
                 elif line.startswith("Notice"):
                     afm_values["Notice"] = line[7:].strip()
                 elif line.startswith("FontBBox"):
-                    afm_values["llx"] = float(fields[1])
-                    afm_values["lly"] = float(fields[2])
-                    afm_values["urx"] = float(fields[3])
-                    afm_values["ury"] = float(fields[4])
+                    afm_values["llx"] = float(fields[1].strip(",;"))
+                    afm_values["lly"] = float(fields[2].strip(",;"))
+                    afm_values["urx"] = float(fields[3].strip(",;"))
+                    afm_values["ury"] = float(fields[4].strip(",;"))
 
             default_char = ""
             first_char = 255
