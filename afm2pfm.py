@@ -19,6 +19,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+"""
+AFM2PFM converter: simple tool for creating PFM files needed to install Type1 fonts in Windows system.
+Information needed to create a PFM file is extracted from AFM (text) file and converted into binary PFM.
+"""
 
 import argparse
 import math
@@ -26,6 +30,7 @@ import re
 import struct
 import typing
 
+VERSION = "0.30"
 PFM_HEADER = [
     ('H', 'Version'),
     ('I', 'Size'),
@@ -135,6 +140,10 @@ AFM_HEADERS_DEFAULTS = {
 
 
 class PfmWriter:
+    """
+    Simple PFM file writer, converts fonts information given in data structures
+    and writes a binary PFM file (needed to install Type 1 font in Windows).
+    """
 
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
@@ -209,6 +218,7 @@ class PfmWriter:
         self.pfm_values['DeviceName'] = 'PostScript'
 
     def prepare_data(self, afm_values: dict, afm_widths: list, afm_kerns: list, extra_args: dict, no_kern_limit):
+        """ Method that gets external data and sets all values needed for PFM file """
 
         def rounds(x):
             return round(float(x))
@@ -345,6 +355,7 @@ class PfmWriter:
         self.pfm_template[name] = f"{1 + len(value)}s"
 
     def calculate_offsets(self):
+        """ Recalculates lengths of all PFM data blocks and sets pointers to structures. """
         offset = 0
         offset += self.pfm_head_length
 
@@ -411,6 +422,7 @@ class PfmWriter:
             self.pfm_template[self.pfm_names[i]] = f"{1 + len(self.pfm_values[self.pfm_names[i]])}s"
 
     def make_pfm(self) -> bytes:
+        """ Serialize PFM data into binary format of PFM file. """
         content_head = [self.pfm_values[self.pfm_names[i]]
                         for i in range(self.pfm_ext_start)]
         new_pfm = struct.pack(self.pfm_head_template, *content_head)
@@ -477,13 +489,18 @@ class PfmWriter:
 
 
 class AfmReader:
+    """
+    Simple AFM file reader, reads AFM and converts it into data structures:
+    dict with font properties, and two lists with characters widths and kerns.
+    """
+
     @staticmethod
     def read_afm(afm_filename: str) -> typing.Tuple[dict, list, list]:
         afm_values: typing.Dict[str, str | int | float] = {}
         afm_widths: typing.List[float | None] = [None] * 256
         afm_kerns: typing.List[typing.Tuple[int, int, float]] = []
 
-        with open(afm_filename, "r") as afm_file:
+        with open(afm_filename, "r", encoding=STRING_ENCODING) as afm_file:
             first_line = afm_file.readline()
             if not first_line.startswith("StartFontMetrics"):
                 raise RuntimeError("A2P: Not an AFM file (improper header).")
@@ -567,7 +584,7 @@ class AfmReader:
 
 
 def main():
-    print("This is afm2pfm, ver. 0.20.")
+    print(f"This is afm2pfm, ver. {VERSION}.")
     parser = argparse.ArgumentParser(description="This is afm2pfm, makes PFM file out of given AFM.")
     parser.add_argument("input", help="Input AFM file")
     parser.add_argument("output", help="Output PFM file")
